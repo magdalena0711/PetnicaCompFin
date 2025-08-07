@@ -2,7 +2,6 @@ import pandas as pd
 import os
 import math
 
-# Ispravna putanja
 input_file = r"C:\Users\Nevena Perišić\Desktop\ProjekatCompFin\podaci\0DTE.xlsx"
 output_folder = "trenazniPodaci"
 
