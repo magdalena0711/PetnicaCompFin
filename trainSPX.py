@@ -29,6 +29,13 @@ for file in os.listdir(data_folder):
         df['Datetime'] = pd.to_datetime(df['Date'])
         df = df.sort_values('Datetime')
 
+        
+        #TODO: fale kolone
+        # print("##########################################")
+        # print(df['Date'].size)
+        # print(df['Date'])
+        # print("##########################################")
+
         #df['log_return'] = np.log(df['Last'] / df['Open'])
         df['log_return'] = np.log(df['Last'] / df['Last'].shift(1))
         df['volatility'] = df['log_return'].rolling(window=window_size).std()
@@ -37,6 +44,7 @@ for file in os.listdir(data_folder):
 
         all_data.append(df[['Open', 'Last', 'volatility']])
         all_data_time.append(df[['Datetime', 'volatility']])
+        #print(df['volatility'])
 
 
 combined_df = pd.concat(all_data, ignore_index=True)
@@ -49,6 +57,7 @@ combined_df_time = pd.concat(all_data_time, ignore_index=True)
 # Grupisanje po 5-minutnim intervalima u danu (bez obzira na datum)
 combined_df_time['time_5min'] = combined_df_time['Datetime'].dt.strftime('%H:%M')
 avg_vol_per_5min = combined_df_time.groupby('time_5min')['volatility'].mean()
+
 
 # Priprema x ose sa fiksnim datumom 2024-01-02
 x_ticks = pd.date_range('2024-01-02 09:30', '2024-01-02 16:00', freq='5T')
