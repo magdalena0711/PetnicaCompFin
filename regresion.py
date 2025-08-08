@@ -86,7 +86,7 @@ pyplot.grid(True)
 pyplot.legend()
 pyplot.show()
 
-jump_threshold = 0.0013  # prag za jump, 2%
+jump_threshold = 0.001  # prag za jump, 2%
 hour_limit = 0.05         # ako želiš vremensko ograničenje u satima
 
 # Izračunaj razliku u satima između uzastopnih merenja
@@ -118,23 +118,7 @@ pos_avg = pos_jumps.groupby('HourRounded')["DeseasonedReturn"].mean() * 10000
 neg_avg = neg_jumps.groupby('HourRounded')["DeseasonedReturn"].mean() * 10000
 
 
-# Plot
-# fig, axs = pyplot.subplots(1, 2, figsize=(12, 5), sharex=True)
 
-# # Pozitivni skokovi
-# axs[0].bar(pos_avg.index, pos_avg.values, color='pink')
-# axs[0].set_title("Positive jumps", fontsize=12, fontweight='bold')
-# axs[0].set_xlabel("Time")
-# axs[0].set_ylabel("Average jump size (bp)")
-
-# # Negativni skokovi
-# axs[1].bar(neg_avg.index, neg_avg.values, color='pink')
-# axs[1].set_title("Negative jumps", fontsize=12, fontweight='bold')
-# axs[1].set_xlabel("Time")
-# axs[1].set_ylabel("Average jump size (bp)")
-
-# pyplot.tight_layout()
-# pyplot.show()
 
 fig, axs = pyplot.subplots(1, 2, figsize=(14, 5), sharex=True)
 
@@ -144,9 +128,12 @@ axs[0].set_title("Positive Jumps", fontsize=12, fontweight='bold')
 axs[0].set_xlabel("Time (hour)")
 axs[0].set_ylabel("Average jump size (%)")  # ako /100, sad je u %
 axs[0].set_xticks(np.arange(9, 16.5, 0.5))  # 9:00 to 16:00 in 0.5h steps
-axs[1].set_yticks(np.linspace(
-    neg_avg.values.min() / 100, 0, 10 
-))
+max_val = neg_avg.values.max() / 100
+min_val = neg_avg.values.min() / 100
+
+step = (0 - min_val) / 14  # trenutni korak kada imaš 10 tickova
+axs[1].set_yticks(np.linspace(min_val, max_val + 3*step, 13))
+
 axs[0].grid(True)
 
 # NEGATIVNI SKOKOVI
@@ -165,24 +152,6 @@ pyplot.tight_layout()
 pyplot.show()
 
 
-# hours = [9.5, 10, 11, 12, 13, 14, 15, 16]
-# pos_avg = [5, 8, 3, 4, 2, 7, 9]
-# neg_avg = [-6, -9, -4, -2, -3, -8, -10]
-
-# fig, axs = pyplot.subplots(1, 2, figsize=(12, 5), sharex=True)
-
-# axs[0].bar(hours, pos_avg, color='gray')
-# axs[0].set_title("Positive jumps", fontsize=12, fontweight='bold')
-# axs[0].set_xlabel("Time")
-# axs[0].set_ylabel("Average jump size (bp)")
-
-# axs[1].bar(hours, neg_avg, color='gray')
-# axs[1].set_title("Negative jumps", fontsize=12, fontweight='bold')
-# axs[1].set_xlabel("Time")
-# axs[1].set_ylabel("Average jump size (bp)")
-
-# pyplot.tight_layout()
-# pyplot.show()
 
 profit_threshold = 0.1   # +10%
 loss_threshold = -0.1    # -10%
