@@ -85,3 +85,65 @@ pyplot.title('Greška deseasoniranih prinosa')
 pyplot.grid(True)
 pyplot.legend()
 pyplot.show()
+
+jump_threshold = 0.02  # prag za jump, 2%
+hour_limit = 0.05         # ako želiš vremensko ograničenje u satima
+
+# Izračunaj razliku u satima između uzastopnih merenja
+df["hour_diff"] = df["Datetime"].diff().dt.total_seconds() / 3600
+
+# Obeleži jump-ove
+df["is_jump"] = (df["hour_diff"] <= hour_limit) & (df["Return"].abs() > jump_threshold)
+
+# Pretpostavljamo da je df već kreiran i 'is_jump' kolona postoji
+
+# Izračunaj sat iz BarNo (5-minutni barovi)
+df['Hour'] = 9 + (df['BarNo'] - 1) * 5 / 60  # Počinje u 9h
+
+# Filtriraj samo jumpove
+jumps_df = df[df["is_jump"]]
+
+# Podeli na pozitivne i negativne skokove
+pos_jumps = jumps_df[jumps_df["DeseasonedReturn"] > 0]
+neg_jumps = jumps_df[jumps_df["DeseasonedReturn"] < 0]
+
+# Grupisi po satu i izračunaj prosečan jump (u bp)
+pos_avg = pos_jumps.groupby('Hour')["DeseasonedReturn"].mean() * 10000
+neg_avg = neg_jumps.groupby('Hour')["DeseasonedReturn"].mean() * 10000
+
+# Plot
+fig, axs = pyplot.subplots(1, 2, figsize=(12, 5), sharex=True)
+
+# Pozitivni skokovi
+axs[0].bar(pos_avg.index, pos_avg.values, color='gray')
+axs[0].set_title("Positive jumps", fontsize=12, fontweight='bold')
+axs[0].set_xlabel("Time")
+axs[0].set_ylabel("Average jump size (bp)")
+
+# Negativni skokovi
+axs[1].bar(neg_avg.index, neg_avg.values, color='gray')
+axs[1].set_title("Negative jumps", fontsize=12, fontweight='bold')
+axs[1].set_xlabel("Time")
+axs[1].set_ylabel("Average jump size (bp)")
+
+pyplot.tight_layout()
+pyplot.show()
+
+hours = [9.5, 10, 11, 12, 13, 14, 15, 16]
+pos_avg = [5, 8, 3, 4, 2, 7, 9]
+neg_avg = [-6, -9, -4, -2, -3, -8, -10]
+
+fig, axs = pyplot.subplots(1, 2, figsize=(12, 5), sharex=True)
+
+axs[0].bar(hours, pos_avg, color='gray')
+axs[0].set_title("Positive jumps", fontsize=12, fontweight='bold')
+axs[0].set_xlabel("Time")
+axs[0].set_ylabel("Average jump size (bp)")
+
+axs[1].bar(hours, neg_avg, color='gray')
+axs[1].set_title("Negative jumps", fontsize=12, fontweight='bold')
+axs[1].set_xlabel("Time")
+axs[1].set_ylabel("Average jump size (bp)")
+
+pyplot.tight_layout()
+pyplot.show()
