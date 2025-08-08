@@ -86,11 +86,12 @@ pyplot.grid(True)
 pyplot.legend()
 pyplot.show()
 
-jump_threshold = 0.0025  # prag za jump, 2%
+jump_threshold = 0.0013  # prag za jump, 2%
 hour_limit = 0.05         # ako želiš vremensko ograničenje u satima
 
 # Izračunaj razliku u satima između uzastopnih merenja
 df["hour_diff"] = df["Datetime"].diff().dt.total_seconds() / 3600
+
 
 # Obeleži jump-ove
 df["is_jump"] = df["Return"].abs() > jump_threshold
@@ -100,6 +101,9 @@ df["is_jump"] = df["Return"].abs() > jump_threshold
 
 # Izračunaj sat iz BarNo (5-minutni barovi)
 df['Hour'] = 9 + (df['BarNo'] - 1) * 5 / 60  # Počinje u 9h
+# Zaokruži vreme na najbližih 30 minuta
+df['HourRounded'] = (df['Hour'] * 2).round() / 2 
+
 
 # Filtriraj samo jumpove
 jumps_df = df[df["is_jump"]]
@@ -108,27 +112,58 @@ jumps_df = df[df["is_jump"]]
 pos_jumps = jumps_df[jumps_df["DeseasonedReturn"] > 0]
 neg_jumps = jumps_df[jumps_df["DeseasonedReturn"] < 0]
 
+
 # Grupisi po satu i izračunaj prosečan jump (u bp)
-pos_avg = pos_jumps.groupby('Hour')["DeseasonedReturn"].mean() * 10000
-neg_avg = neg_jumps.groupby('Hour')["DeseasonedReturn"].mean() * 10000
+pos_avg = pos_jumps.groupby('HourRounded')["DeseasonedReturn"].mean() * 10000
+neg_avg = neg_jumps.groupby('HourRounded')["DeseasonedReturn"].mean() * 10000
+
 
 # Plot
-fig, axs = pyplot.subplots(1, 2, figsize=(12, 5), sharex=True)
+# fig, axs = pyplot.subplots(1, 2, figsize=(12, 5), sharex=True)
 
-# Pozitivni skokovi
-axs[0].bar(pos_avg.index, pos_avg.values, color='pink')
-axs[0].set_title("Positive jumps", fontsize=12, fontweight='bold')
-axs[0].set_xlabel("Time")
-axs[0].set_ylabel("Average jump size (bp)")
+# # Pozitivni skokovi
+# axs[0].bar(pos_avg.index, pos_avg.values, color='pink')
+# axs[0].set_title("Positive jumps", fontsize=12, fontweight='bold')
+# axs[0].set_xlabel("Time")
+# axs[0].set_ylabel("Average jump size (bp)")
 
-# Negativni skokovi
-axs[1].bar(neg_avg.index, neg_avg.values, color='pink')
-axs[1].set_title("Negative jumps", fontsize=12, fontweight='bold')
-axs[1].set_xlabel("Time")
-axs[1].set_ylabel("Average jump size (bp)")
+# # Negativni skokovi
+# axs[1].bar(neg_avg.index, neg_avg.values, color='pink')
+# axs[1].set_title("Negative jumps", fontsize=12, fontweight='bold')
+# axs[1].set_xlabel("Time")
+# axs[1].set_ylabel("Average jump size (bp)")
+
+# pyplot.tight_layout()
+# pyplot.show()
+
+fig, axs = pyplot.subplots(1, 2, figsize=(14, 5), sharex=True)
+
+# POZITIVNI SKOKOVI
+axs[0].bar(pos_avg.index, pos_avg.values / 100, width=0.4, color='green')
+axs[0].set_title("Positive Jumps", fontsize=12, fontweight='bold')
+axs[0].set_xlabel("Time (hour)")
+axs[0].set_ylabel("Average jump size (%)")  # ako /100, sad je u %
+axs[0].set_xticks(np.arange(9, 16.5, 0.5))  # 9:00 to 16:00 in 0.5h steps
+axs[1].set_yticks(np.linspace(
+    neg_avg.values.min() / 100, 0, 10 
+))
+axs[0].grid(True)
+
+# NEGATIVNI SKOKOVI
+axs[1].bar(neg_avg.index, neg_avg.values / 100, width=0.4, color='red')
+axs[1].set_title("Negative Jumps", fontsize=12, fontweight='bold')
+axs[1].set_xlabel("Time (hour)")
+axs[1].set_ylabel("Average jump size (%)")
+axs[1].set_xticks(np.arange(9, 16.5, 0.5))
+axs[1].set_yticks(np.linspace(
+    neg_avg.values.min() / 100, 0, 10  # 10 jednakih tickova od min vrednosti do 0
+))
+axs[1].grid(True)
+
 
 pyplot.tight_layout()
 pyplot.show()
+
 
 # hours = [9.5, 10, 11, 12, 13, 14, 15, 16]
 # pos_avg = [5, 8, 3, 4, 2, 7, 9]
