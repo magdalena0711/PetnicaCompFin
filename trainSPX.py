@@ -74,11 +74,8 @@ plt.xticks(x_ticks[::3], x_labels[::3], rotation=45)  # ređe labele radi pregle
 plt.tight_layout()
 #plt.show()
 
-
-
 X = combined_df[['Open', 'Last']]
 y = combined_df['volatility']
-
 
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.20, random_state=42)
 

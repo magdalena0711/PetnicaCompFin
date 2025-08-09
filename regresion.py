@@ -4,28 +4,21 @@ import matplotlib.pyplot as pyplot
 from sklearn.preprocessing import PolynomialFeatures
 from sklearn.linear_model import LinearRegression
 
-# Učitaj podatke
 df = pd.read_excel(r"C:\Users\Nevena Perišić\Desktop\ProjekatCompFin\podaci\SPXintraday.xlsx")
 
 df['Datetime'] = pd.to_datetime(df['Date'])
 
 df = df.sort_values('Datetime')
-
-# Napravi BarNo: redni broj bara u svakom danu (5-minutni intervali)
 df['date_only'] = df['Datetime'].dt.date
-df['BarNo'] = df.groupby('date_only').cumcount() + 1  # počinje od 1 svakog dana
+df['BarNo'] = df.groupby('date_only').cumcount() + 1 
 
-# Izbaci prvi bar svakog dana i barove posle 79
 df = df[df['BarNo'] > 1]
 df = df[df['BarNo'] <= 79]
 
-# Izračunaj prinos
 df['Return'] = df['Last'].pct_change()
-df.loc[df['date_only'] != df['date_only'].shift(1), 'Return'] = np.nan  # prvi u danu NaN
+df.loc[df['date_only'] != df['date_only'].shift(1), 'Return'] = np.nan 
 df = df.dropna(subset=['Return'])
 
-
-# Desezoniranje: oduzmi prosečan prinos
 average_return = df['Return'].mean()
 df['DeseasonedReturn'] = df['Return'] - average_return
 
@@ -49,7 +42,6 @@ poly_features = poly.fit_transform(x.reshape(-1, 1))
 poly_reg_model = LinearRegression()
 poly_reg_model.fit(poly_features, y)
 
-# Predikcija i prikaz
 y_predicted = np.sqrt(np.exp(poly_reg_model.predict(poly_features)))
 
 # Realna volatilnost (apsolutna vrednost deseasoniranog prinosa)
@@ -73,7 +65,7 @@ pyplot.grid(True)
 pyplot.legend()
 pyplot.show()
 
-# Izračunaj grešku
+# Greška
 error = (df['DeseasonedReturn'] - y_predicted)
 df['Error'] = error
 
@@ -86,39 +78,29 @@ pyplot.grid(True)
 pyplot.legend()
 pyplot.show()
 
-jump_threshold = 0.001  # prag za jump, 2%
-hour_limit = 0.05         # ako želiš vremensko ograničenje u satima
+jump_threshold = 0.001      # prag za jump, 0.1%
+hour_limit = 0.05          
 
-# Izračunaj razliku u satima između uzastopnih merenja
+#Razlika u satima između uzastopnih merenja
 df["hour_diff"] = df["Datetime"].diff().dt.total_seconds() / 3600
-
-
-# Obeleži jump-ove
 df["is_jump"] = df["Return"].abs() > jump_threshold
 
 
-# Pretpostavljamo da je df već kreiran i 'is_jump' kolona postoji
-
-# Izračunaj sat iz BarNo (5-minutni barovi)
+#5-minutni barovi
 df['Hour'] = 9 + (df['BarNo'] - 1) * 5 / 60  # Počinje u 9h
-# Zaokruži vreme na najbližih 30 minuta
 df['HourRounded'] = (df['Hour'] * 2).round() / 2 
 
 
-# Filtriraj samo jumpove
+#Filtriranje jumpova
 jumps_df = df[df["is_jump"]]
 
-# Podeli na pozitivne i negativne skokove
+#Podela na pozitivne i negativne jumpove
 pos_jumps = jumps_df[jumps_df["DeseasonedReturn"] > 0]
 neg_jumps = jumps_df[jumps_df["DeseasonedReturn"] < 0]
 
-
-# Grupisi po satu i izračunaj prosečan jump (u bp)
+#Grupisanje po satima i izračunavanje srednje vrednosti
 pos_avg = pos_jumps.groupby('HourRounded')["DeseasonedReturn"].mean() * 10000
 neg_avg = neg_jumps.groupby('HourRounded')["DeseasonedReturn"].mean() * 10000
-
-
-
 
 fig, axs = pyplot.subplots(1, 2, figsize=(14, 5), sharex=True)
 
@@ -126,12 +108,12 @@ fig, axs = pyplot.subplots(1, 2, figsize=(14, 5), sharex=True)
 axs[0].bar(pos_avg.index, pos_avg.values / 100, width=0.4, color='green')
 axs[0].set_title("Positive Jumps", fontsize=12, fontweight='bold')
 axs[0].set_xlabel("Time (hour)")
-axs[0].set_ylabel("Average jump size (%)")  # ako /100, sad je u %
-axs[0].set_xticks(np.arange(9, 16.5, 0.5))  # 9:00 to 16:00 in 0.5h steps
+axs[0].set_ylabel("Average jump size (%)") 
+axs[0].set_xticks(np.arange(9, 16.5, 0.5))  
 max_val = neg_avg.values.max() / 100
 min_val = neg_avg.values.min() / 100
 
-step = (0 - min_val) / 14  # trenutni korak kada imaš 10 tickova
+step = (0 - min_val) / 14 
 axs[1].set_yticks(np.linspace(min_val, max_val + 3*step, 13))
 
 axs[0].grid(True)
@@ -143,7 +125,7 @@ axs[1].set_xlabel("Time (hour)")
 axs[1].set_ylabel("Average jump size (%)")
 axs[1].set_xticks(np.arange(9, 16.5, 0.5))
 axs[1].set_yticks(np.linspace(
-    neg_avg.values.min() / 100, 0, 10  # 10 jednakih tickova od min vrednosti do 0
+    neg_avg.values.min() / 100, 0, 10 
 ))
 axs[1].grid(True)
 
@@ -159,19 +141,12 @@ exit_bar = 78            # Time stop: pre poslednjeg bara, ima ih 79
 df["StraddlePrice"] = df["Last"] * 0.02
 
 trades = []
-
+sum_of_profits = 0
+return_on_investment = []
 for day, day_df in df.groupby("date_only"):
     day_df = day_df.sort_values("BarNo").copy().reset_index(drop=True)
-
-    #pretpostavka da se kupuje u prvih 20 bara
-    #print(f"\n{day} - broj barova:", len(day_df))
-
-    # jump_signal = day_df["is_jump"]
-
     
     jump_signal = day_df["is_jump"]
-
-    #print("Broj skokova u prvih 20 barova:", jump_signal.sum())
 
     if jump_signal.sum() > 0:
 
@@ -199,8 +174,11 @@ for day, day_df in df.groupby("date_only"):
                     "exit_time": exit_time,
                     "entry_price": entry_price,
                     "exit_price": straddle_value,
-                    "pnl": pnl
+                    "pnl": pnl,
+                    "profit": straddle_value - entry_price
                 })
+                sum_of_profits += straddle_value - entry_price
+                return_on_investment.append((straddle_value- entry_price) / entry_price)
                 open_trade = False
                 break
 
@@ -217,14 +195,18 @@ for day, day_df in df.groupby("date_only"):
                 "exit_time": day_df.loc[i, "Datetime"],
                 "entry_price": entry_price,
                 "exit_price": straddle_value,
-                "pnl": pnl
+                "pnl": pnl,
+                "profit": straddle_value - entry_price
             })
+            sum_of_profits += straddle_value - entry_price
 trades_df = pd.DataFrame(trades)
 print(trades_df)
 print("\nUkupan broj trejdova:", len(trades_df))
 if not trades_df.empty and "pnl" in trades_df.columns:
-    print("Prosečan PnL:", trades_df["pnl"].mean())
+    print("Prosečan PnL:", trades_df["pnl"].mean()*1000)
 else:
     print("Nema nijednog trejda ili kolona 'pnl' ne postoji.")
 
+print("Ukupan profit:", sum_of_profits*100)
+print("")
 # print("Prosečan PnL:", trades_df["pnl"].mean())
